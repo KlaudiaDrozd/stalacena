@@ -1,34 +1,40 @@
 import streamlit as st
-
-st.title("🎈 My new app")
-st.write(
-    "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
-)
-import streamlit as st
 import pandas as pd
+import requests
 
-# Funkcja do wczytywania pliku CSV z URL
-def load_csv_from_url(url):
-    return pd.read_csv(url)
+# Funkcja do pobierania plików z SharePoint
+def load_csv_from_sharepoint(url, headers=None):
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return pd.read_csv(pd.compat.StringIO(response.text))
+    else:
+        st.error(f"Nie udało się pobrać danych z URL: {response.status_code}")
+        return None
 
 # Interfejs użytkownika w Streamlit
 def main():
     st.title("Aplikacja do porównywania raportu z pełną bazą danych")
-    
-    # Podane URL do plików CSV
-    url_prod_price = "https://scommercegroup.sharepoint.com/source/db/data_prod_price.csv"
-    url_prod_data = "https://scommercegroup.sharepoint.com/source/db/products_s_data.csv"
-    
-    # Wczytanie plików CSV z URL
+
+    # URL do plików CSV w chmurze
+    url_prod_price = "https://scommercegroup.sharepoint.com/:x:/r/sites/ZAKUPY/Shared%20Documents/Raporty/.data_source/db/data_prod_price_.csv?d=wc7bfcbe9ffeb4d8ebc099f327b34a5ab&csf=1&web=1&e=spfrRB"
+    url_prod_data = "https://scommercegroup.sharepoint.com/:x:/r/sites/ZAKUPY/Shared%20Documents/Raporty/.data_source/db/products_s_data.csv?d=w79e4d83752c84acb931ee0a682af12e6&csf=1&web=1&e=nDqKvY"
+
+    # Jeśli pliki są zabezpieczone, dodaj token w nagłówkach
+    headers = {
+        "Authorization": "Bearer YOUR_ACCESS_TOKEN"  # Zastąp "YOUR_ACCESS_TOKEN" rzeczywistym tokenem
+    }
+
+    # Wczytanie plików CSV z SharePoint
     try:
-        full_db_price = load_csv_from_url(url_prod_price)
-        full_db_data = load_csv_from_url(url_prod_data)
+        full_db_price = load_csv_from_sharepoint(url_prod_price, headers)
+        full_db_data = load_csv_from_sharepoint(url_prod_data, headers)
         
-        st.write("Dane z bazy danych - ceny produktów:")
-        st.dataframe(full_db_price.head())  # Pokazujemy tylko kilka pierwszych wierszy
-        
-        st.write("Dane z bazy danych - szczegóły produktów:")
-        st.dataframe(full_db_data.head())  # Pokazujemy tylko kilka pierwszych wierszy
+        if full_db_price is not None and full_db_data is not None:
+            st.write("Dane z bazy danych - ceny produktów:")
+            st.dataframe(full_db_price.head())  # Pokazujemy tylko kilka pierwszych wierszy
+            
+            st.write("Dane z bazy danych - szczegóły produktów:")
+            st.dataframe(full_db_data.head())  # Pokazujemy tylko kilka pierwszych wierszy
     except Exception as e:
         st.error(f"Nie udało się załadować danych z URL: {e}")
     
